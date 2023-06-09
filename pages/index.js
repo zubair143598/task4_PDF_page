@@ -1,5 +1,5 @@
 
-import BasicModal from '@/components/BasicModal'
+
 
 
 import UploadFile from '@/components/UploadFile'
