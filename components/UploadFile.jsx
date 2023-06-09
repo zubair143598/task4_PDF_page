@@ -6,6 +6,7 @@ import Modal from "@mui/material/Modal";
 import SignatureCanvas from "react-signature-canvas";
 import { PDFDocument } from "pdf-lib";
 import { Document, Page, pdfjs } from "react-pdf";
+import Draggable from "react-draggable";
 import "react-pdf/dist/esm/Page/AnnotationLayer.css";
 
 
@@ -24,26 +25,22 @@ const style = {
 };
 
 const UploadFile = () => {
- 
   const [open, setOpen] = useState(false);
   const canvasRef = useRef(null);
-  //used for to preview the file which is uploaded
   const [file, setFile] = useState(null);
   const [numPages, setNumPages] = useState(null);
-  //for downloading the signed file
   const [signedPdfUrl, setSignedPdfUrl] = useState(null);
+  const [signaturePosition, setSignaturePosition] = useState({ x: 0, y: 0 });
 
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
 
- //used to display the uploaded file
   const onFileChange = (event) => {
     const selectedFile = event.target.files[0];
-    if (selectedFile && selectedFile.type === 'application/pdf') {
+    if (selectedFile && selectedFile.type === "application/pdf") {
       setFile(selectedFile);
     } else {
-      // File type not supported, handle accordingly
-      alert('Please select a PDF file.');
+      alert("Please select a PDF file.");
     }
   };
 
@@ -51,36 +48,39 @@ const UploadFile = () => {
     setNumPages(numPages);
   };
 
-  //used to clear the signature canvas area 
   const handleClear = () => {
     canvasRef.current.clear();
   };
 
-  //used to add and preview the signatured on the file
+  const handleDrag = (e, ui) => {
+    const { x, y } = ui;
+    const canvas = canvasRef.current;
+    const canvasRect = canvas.getBoundingClientRect();
+    const signatureX = x - canvasRect.left;
+    const signatureY = y - canvasRect.top;
+    setSignaturePosition({ x: signatureX, y: signatureY });
+  };
+
   const handleAdd = async () => {
     if (!file) {
-      // Handle case where file is not selected or loaded
+      alert("File is not selected");
       return;
     }
 
-    // Get the signature data from the canvas
-    const signatureData = canvasRef.current.toDataURL();
+    const canvas = canvasRef.current;
+const signatureData = canvas.getTrimmedCanvas().toDataURL();
 
-    // Load the PDF document
     const pdf = await PDFDocument.load(await file.arrayBuffer());
 
-    // Embed the signature image as a new page in the PDF
     const signatureImage = await pdf.embedPng(signatureData);
     const pages = pdf.getPages();
     const firstPage = pages[0];
 
-    // Calculate the coordinates for the signature placement
-    const signatureWidth = 100; // Adjust as needed
-    const signatureHeight = 50; // Adjust as needed
-    const x = firstPage.getWidth() - signatureWidth - 10; // Adjust the margins as needed
-    const y = firstPage.getHeight() - signatureHeight - 10; // Adjust the margins as needed
+    const signatureWidth = 100;
+    const signatureHeight = 50;
+    const x = signaturePosition.x;
+    const y = signaturePosition.y;
 
-    // Draw the signature image on the first page
     firstPage.drawImage(signatureImage, {
       x: x,
       y: y,
@@ -88,49 +88,42 @@ const UploadFile = () => {
       height: signatureHeight,
     });
 
-    // Generate a new PDF blob with the added signature
     const pdfBytes = await pdf.save();
 
-    // Create a blob URL for the modified PDF
     const modifiedPdfUrl = URL.createObjectURL(
-      new Blob([pdfBytes], { type: 'application/pdf' })
+      new Blob([pdfBytes], { type: "application/pdf" })
     );
 
-    // Update the file state with the modified PDF
     setFile(modifiedPdfUrl);
-    handleClose('true')
-    setSignedPdfUrl(true)
+    handleClose();
+    setSignedPdfUrl(true);
   };
 
-
-//used to download the the signed file
   const handleDownload = () => {
     if (!file) {
-      // Handle case where file is not available
+      alert("File is not available");
       return;
     }
 
-    // Create a temporary link element
-    const link = document.createElement('a');
+    const link = document.createElement("a");
     link.href = file;
-    link.download = 'modified_file.pdf';
-
-    // Simulate a click on the link to trigger the download
+    link.download = "modified_file.pdf";
     link.click();
   };
+  
 
   return (
     <div>
-      <input type="file"  accept=".pdf" onChange={onFileChange} />
+      <input type="file" accept=".pdf" onChange={onFileChange} />
       {file && (
-        <div >
-          <Document className="border-2 border-black p-2 m-1  w-[50%]" file={file} onLoadSuccess={onDocumentLoadSuccess}>
+        <div>
+          <Document
+            className="border-2 border-black p-2 m-1 w-[50%]"
+            file={file}
+            onLoadSuccess={onDocumentLoadSuccess}
+          >
             {Array.from(new Array(numPages), (el, index) => (
-              <Page
-                key={`page_${index + 1}`}
-                pageNumber={index + 1}
-                width={700}
-              />
+              <Page key={`page_${index + 1}`} pageNumber={index + 1} width={700} />
             ))}
           </Document>
           <div>
@@ -143,42 +136,47 @@ const UploadFile = () => {
             >
               <Box sx={style} className="">
                 <Typography
-                  className=" p-2 border-black border-2 "
+                  className="p-2 border-black border-2"
                   id="modal-modal-title"
                   variant="h6"
                   component="h2"
                 >
-                  <SignatureCanvas
-                    penColor="black"
-                    canvasProps={{
-                      width: 300,
-                      height: 200,
-                      className: "sigCanvas",
-                    }}
-                    ref={canvasRef}
-                  />
+                <Draggable
+  onDrag={handleDrag}
+  bounds="parent"
+  position={signaturePosition}
+>
+  <SignatureCanvas
+    penColor="black"
+    canvasProps={{
+      width: 300,
+      height: 200,
+      className: "sigCanvas",
+    }}
+    ref={canvasRef}
+  />
+</Draggable>
                 </Typography>
                 <Typography
-                  className=" flex justify-between "
+                  className="flex justify-between"
                   id="modal-modal-description"
                   sx={{ mt: 2 }}
                 >
                   <button
                     onClick={handleClear}
-                    className=" py-2 px-3 bg-gray-600 text-white rounded "
+                    className="py-2 px-3 bg-gray-600 text-white rounded"
                   >
-                    Cancle
+                    Cancel
                   </button>
                   <button
                     onClick={handleAdd}
-                    className=" py-2 px-3 bg-gray-600 text-white rounded "
+                    className="py-2 px-3 bg-gray-600 text-white rounded"
                   >
                     Add
                   </button>
                 </Typography>
               </Box>
             </Modal>
-            {/* if the file is signed then display the download button otherwise not  */}
             {signedPdfUrl && <button onClick={handleDownload}>Download</button>}
           </div>
         </div>
