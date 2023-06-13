@@ -1,0 +1,226 @@
+import React, { useState, useRef, useEffect } from "react";
+import Box from "@mui/material/Box";
+import Button from "@mui/material/Button";
+import Typography from "@mui/material/Typography";
+import Modal from "@mui/material/Modal";
+import SignatureCanvas from "react-signature-canvas";
+import { PDFDocument } from "pdf-lib";
+import { Document, Page, pdfjs } from "react-pdf";
+import Draggable from "react-draggable";
+import "react-pdf/dist/esm/Page/AnnotationLayer.css";
+import download from "downloadjs";
+
+pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.js`;
+
+const style = {
+  position: "absolute",
+  top: "50%",
+  left: "50%",
+  transform: "translate(-50%, -50%)",
+  width: 400,
+  bgcolor: "background.paper",
+  border: "2px solid #000",
+  boxShadow: 24,
+  p: 4,
+};
+
+const Checking2 = () => {
+  const [open, setOpen] = useState(false);
+  const [numPages, setNumPages] = useState(null);
+  const [pageNumber, setPageNumber] = useState(1);
+  const [file, setFile] = useState(null);
+  const [signatureImage, setSignatureImage] = useState("");
+  const [signaturePosition, setSignaturePosition] = useState({ x: 0, y: 0 });
+
+  const canvasRef = useRef(null);
+  const pdfContainerRef = useRef(null);
+
+  useEffect(() => {
+    const container = pdfContainerRef.current;
+    if (container) {
+      const handleResize = () => {
+        const containerRect = container.getBoundingClientRect();
+        const maxX = containerRect.width - signatureRect.width;
+        const maxY = containerRect.height - signatureRect.height;
+
+        setSignaturePosition((prevPosition) => {
+          const adjustedX = Math.min(prevPosition.x, maxX);
+          const adjustedY = Math.min(prevPosition.y, maxY);
+          return { x: adjustedX, y: adjustedY };
+        });
+      };
+
+      window.addEventListener("resize", handleResize);
+      return () => {
+        window.removeEventListener("resize", handleResize);
+      };
+    }
+  }, []);
+
+  const handleOpen = () => setOpen(true);
+  const handleClose = () => setOpen(false);
+
+  const onFileChange = (event) => {
+    const selectedFile = event.target.files[0];
+    if (selectedFile && selectedFile.type === "application/pdf") {
+      setFile(selectedFile); // Store the selected file in the state
+    } else {
+      alert("Please select a PDF file.");
+    }
+  };
+
+  function onDocumentLoadSuccess({ numPages }) {
+    setNumPages(numPages);
+  }
+
+  const handleClear = () => {
+    canvasRef.current.clear();
+  };
+
+  const handleAdd = () => {
+    const canvas = canvasRef.current;
+    const signature = canvas.toDataURL(); // Get the signature as a data URL
+    setSignatureImage(signature);
+    handleClose();
+  };
+
+  const handleDownload = async () => {
+    try {
+      const pdfDoc = await PDFDocument.load(await file.arrayBuffer());
+      const pages = pdfDoc.getPages();
+
+      const image = await pdfDoc.embedPng(signatureImage);
+      const { width, height } = image.scale(0.75);
+
+      const page = pages[pageNumber - 1];
+      page.drawImage(image, {
+        x: signaturePosition.x ,
+        y: page.getHeight() - signaturePosition.y - height + 86,
+        width,
+        height,
+      });
+
+      const modifiedPdfBytes = await pdfDoc.save();
+      download(modifiedPdfBytes, "modified.pdf", "application/pdf");
+    } catch (error) {
+      console.error("Error modifying and downloading PDF:", error);
+    }
+  };
+
+  const handleDrag = (e, draggableData) => {
+    const { x, y } = draggableData;
+    const container = pdfContainerRef.current;
+    const containerRect = container.getBoundingClientRect();
+    const signatureRect = e.target.getBoundingClientRect();
+  
+    const minX = containerRect.left - 90;
+    const maxX =
+      containerRect.left + containerRect.width - signatureRect.width + 30;
+    const minY = containerRect.top - 50;
+    
+    const pageHeight = containerRect.height / numPages; // Calculate the height of each page
+    const maxY =
+      containerRect.top +
+      containerRect.height -
+      signatureRect.height +
+      pageHeight * (numPages - 1) + 350; // Adjust maxY based on the number of pages
+  
+    let adjustedX = x;
+    let adjustedY = y;
+  
+    if (x < minX) {
+      adjustedX = minX;
+    } else if (x > maxX) {
+      adjustedX = maxX;
+    }
+  
+    if (y < minY) {
+      adjustedY = minY;
+    } else if (y > maxY) {
+      adjustedY = maxY;
+    }
+  
+    setSignaturePosition({ x: adjustedX, y: adjustedY });
+  };
+
+  return (
+    <div>
+      <input type="file" accept=".pdf" onChange={onFileChange} />
+      {file && (
+        <div>
+          <div
+            ref={pdfContainerRef}
+            className="pdf-container relative border-2 border-black p-2 m-1 w-min"
+          >
+            <Document file={file} onLoadSuccess={onDocumentLoadSuccess}>
+              {Array.from(new Array(numPages), (el, index) => (
+                <Page
+                  key={`page_${index + 1}`}
+                  pageNumber={index + 1}
+                  width={700}
+                />
+              ))}
+            </Document>
+            <div className="absolute top-0">
+              <Draggable
+                position={{ x: signaturePosition.x, y: signaturePosition.y }}
+                onDrag={handleDrag}
+              >
+                <img src={signatureImage} alt="Signature" />
+              </Draggable>
+            </div>
+          </div>
+          <div>
+            <Button onClick={handleOpen}>Sign</Button>
+            <Modal
+              open={open}
+              onClose={handleClose}
+              aria-labelledby="modal-modal-title"
+              aria-describedby="modal-modal-description"
+            >
+              <Box sx={style} className="">
+                <Typography
+                  className="p-2 border-black border-2"
+                  id="modal-modal-title"
+                  variant="h6"
+                  component="h2"
+                >
+                  <SignatureCanvas
+                    penColor="black"
+                    canvasProps={{
+                      width: 300,
+                      height: 200,
+                      className: "sigCanvas",
+                    }}
+                    ref={canvasRef}
+                  />
+                </Typography>
+                <Typography
+                  className="flex justify-between"
+                  id="modal-modal-description"
+                  sx={{ mt: 2 }}
+                >
+                  <button
+                    onClick={handleClear}
+                    className="py-2 px-3 bg-gray-600 text-white rounded"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleAdd}
+                    className="py-2 px-3 bg-gray-600 text-white rounded"
+                  >
+                    Add
+                  </button>
+                </Typography>
+              </Box>
+            </Modal>
+            <button onClick={handleDownload}>Download</button>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default Checking2;

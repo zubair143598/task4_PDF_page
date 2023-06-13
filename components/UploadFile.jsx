@@ -9,7 +9,6 @@ import { Document, Page, pdfjs } from "react-pdf";
 import Draggable from "react-draggable";
 import "react-pdf/dist/esm/Page/AnnotationLayer.css";
 
-
 pdfjs.GlobalWorkerOptions.workerSrc = `//cdnjs.cloudflare.com/ajax/libs/pdf.js/${pdfjs.version}/pdf.worker.js`;
 
 const style = {
@@ -26,10 +25,10 @@ const style = {
 
 const UploadFile = () => {
   const [open, setOpen] = useState(false);
-  const canvasRef = useRef(null);
   const [file, setFile] = useState(null);
   const [numPages, setNumPages] = useState(null);
   const [signedPdfUrl, setSignedPdfUrl] = useState(null);
+  const canvasRef = useRef(null);
   const [signaturePosition, setSignaturePosition] = useState({ x: 0, y: 0 });
 
   const handleOpen = () => setOpen(true);
@@ -68,7 +67,7 @@ const UploadFile = () => {
     }
 
     const canvas = canvasRef.current;
-const signatureData = canvas.getTrimmedCanvas().toDataURL();
+    const signatureData = canvas.getTrimmedCanvas().toDataURL();
 
     const pdf = await PDFDocument.load(await file.arrayBuffer());
 
@@ -110,7 +109,6 @@ const signatureData = canvas.getTrimmedCanvas().toDataURL();
     link.download = "modified_file.pdf";
     link.click();
   };
-  
 
   return (
     <div>
@@ -123,7 +121,11 @@ const signatureData = canvas.getTrimmedCanvas().toDataURL();
             onLoadSuccess={onDocumentLoadSuccess}
           >
             {Array.from(new Array(numPages), (el, index) => (
-              <Page key={`page_${index + 1}`} pageNumber={index + 1} width={700} />
+              <Page
+                key={`page_${index + 1}`}
+                pageNumber={index + 1}
+                width={700}
+              />
             ))}
           </Document>
           <div>
@@ -141,21 +143,21 @@ const signatureData = canvas.getTrimmedCanvas().toDataURL();
                   variant="h6"
                   component="h2"
                 >
-                <Draggable
-  onDrag={handleDrag}
-  bounds="parent"
-  position={signaturePosition}
->
-  <SignatureCanvas
-    penColor="black"
-    canvasProps={{
-      width: 300,
-      height: 200,
-      className: "sigCanvas",
-    }}
-    ref={canvasRef}
-  />
-</Draggable>
+                  <Draggable
+                    onDrag={handleDrag}
+                    bounds="parent"
+                    position={signaturePosition}
+                  >
+                    <SignatureCanvas
+                      penColor="black"
+                      canvasProps={{
+                        width: 300,
+                        height: 200,
+                        className: "sigCanvas",
+                      }}
+                      ref={canvasRef}
+                    />
+                  </Draggable>
                 </Typography>
                 <Typography
                   className="flex justify-between"

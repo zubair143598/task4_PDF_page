@@ -1,10 +1,6 @@
 
-
-
-
-import Drag from '@/components/Drag'
 import UploadFile from '@/components/UploadFile'
-
+import Checking2 from '@/components/checking2'
 
 
 export default function Home() {
@@ -12,8 +8,10 @@ export default function Home() {
     <main
       
     >
-      <UploadFile/>
-     {/* <Drag/> */}
+     <Checking2/>
+      
+      {/* <UploadFile/> */}
+     
     </main>
   )
 }

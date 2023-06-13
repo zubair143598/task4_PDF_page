@@ -6,4 +6,21 @@
 .textLayer
 {
     display: none;
+    
 }
+
+.pdf-container {
+    position: relative;
+  }
+  
+  .pdf-container .react-draggable {
+    cursor: move;
+  }
+  
+  .pdf-container .react-draggable-dragged {
+    z-index: 1;
+  }
+  
+  .pdf-container .react-draggable-dragging {
+    opacity: 0.8;
+  }
