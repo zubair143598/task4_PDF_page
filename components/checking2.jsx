@@ -1,4 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
+import { Resizable } from "react-resizable";
+import { ResizableBox } from 'react-resizable';
+
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Typography from "@mui/material/Typography";
@@ -24,13 +27,14 @@ const style = {
   p: 4,
 };
 
-const Checking2 = () => {
+const checking2 = () => {
   const [open, setOpen] = useState(false);
   const [numPages, setNumPages] = useState(null);
   const [pageNumber, setPageNumber] = useState(1);
   const [file, setFile] = useState(null);
   const [signatureImage, setSignatureImage] = useState("");
   const [signaturePosition, setSignaturePosition] = useState({ x: 0, y: 0 });
+  const [signatureSize, setSignatureSize] = useState({ width: 200, height: 100 });
   const [signedPdfUrl, setSignedPdfUrl] = useState(null);
 
   const canvasRef = useRef(null);
@@ -41,8 +45,8 @@ const Checking2 = () => {
     if (container) {
       const handleResize = () => {
         const containerRect = container.getBoundingClientRect();
-        const maxX = containerRect.width - signatureRect.width;
-        const maxY = containerRect.height - signatureRect.height;
+        const maxX = containerRect.width - signatureSize.width;
+        const maxY = containerRect.height - signatureSize.height;
 
         setSignaturePosition((prevPosition) => {
           const adjustedX = Math.min(prevPosition.x, maxX);
@@ -56,7 +60,7 @@ const Checking2 = () => {
         window.removeEventListener("resize", handleResize);
       };
     }
-  }, []);
+  }, [signatureSize]);
 
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
@@ -161,6 +165,11 @@ const Checking2 = () => {
     setSignaturePosition({ x: adjustedX, y: adjustedY });
   };
 
+  const handleResize = (e, { size }) => {
+    setSignatureSize(size);
+  };
+  
+
   return (
     <div>
       <input type="file" accept=".pdf" onChange={onFileChange} />
@@ -179,16 +188,20 @@ const Checking2 = () => {
                 />
               ))}
             </Document>
-            {signatureImage && ( // Check if signatureImage is not empty
-              <div className="absolute top-0">
-                <Draggable
-                  position={{ x: signaturePosition.x, y: signaturePosition.y }}
-                  onDrag={handleDrag}
-                >
-                  <img src={signatureImage} alt="Signature" />
-                </Draggable>
-              </div>
-            )}
+            {signatureImage && (
+      <div className="absolute top-0">
+        <Draggable
+          position={{ x: signaturePosition.x, y: signaturePosition.y }}
+          onDrag={handleDrag}
+        >
+          <div style={{ width: signatureSize.width, height: signatureSize.height }}>
+          <ResizableBox width={400} height={300} onResize={handleResize} >
+              <img src={signatureImage} alt="Signature" />
+            </ResizableBox>
+          </div>
+        </Draggable>
+      </div>
+    )}
           </div>
           <div>
             <Button onClick={handleOpen}>Sign</Button>
@@ -245,4 +258,4 @@ const Checking2 = () => {
   );
 };
 
-export default Checking2;
+export default checking2;
