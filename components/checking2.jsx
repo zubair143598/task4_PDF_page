@@ -31,6 +31,7 @@ const Checking2 = () => {
   const [file, setFile] = useState(null);
   const [signatureImage, setSignatureImage] = useState("");
   const [signaturePosition, setSignaturePosition] = useState({ x: 0, y: 0 });
+  const [signedPdfUrl, setSignedPdfUrl] = useState(null);
 
   const canvasRef = useRef(null);
   const pdfContainerRef = useRef(null);
@@ -82,16 +83,17 @@ const Checking2 = () => {
     const signature = canvas.toDataURL(); // Get the signature as a data URL
     setSignatureImage(signature);
     handleClose();
+    setSignedPdfUrl(true);
   };
 
   const handleDownload = async () => {
     try {
       const pdfDoc = await PDFDocument.load(await file.arrayBuffer());
       const pages = pdfDoc.getPages();
-  
+
       const image = await pdfDoc.embedPng(signatureImage);
       const { width, height } = image.scale(0.75);
-  
+
       for (let i = 0; i < pages.length; i++) {
         const page = pages[i];
         const container = pdfContainerRef.current;
@@ -99,9 +101,14 @@ const Checking2 = () => {
         const pageHeight = containerRect.height / numPages;
         const pageSignaturePosition = {
           x: signaturePosition.x + 10,
-          y: page.getHeight() - signaturePosition.y - height + 46 + pageHeight * i,
+          y:
+            page.getHeight() -
+            signaturePosition.y -
+            height +
+            46 +
+            pageHeight * i,
         };
-  
+
         page.drawImage(image, {
           x: pageSignaturePosition.x,
           y: pageSignaturePosition.y,
@@ -109,48 +116,48 @@ const Checking2 = () => {
           height,
         });
       }
-  
+
       const modifiedPdfBytes = await pdfDoc.save();
       download(modifiedPdfBytes, "modified.pdf", "application/pdf");
     } catch (error) {
       console.error("Error modifying and downloading PDF:", error);
     }
   };
-  
 
   const handleDrag = (e, draggableData) => {
     const { x, y } = draggableData;
     const container = pdfContainerRef.current;
     const containerRect = container.getBoundingClientRect();
     const signatureRect = e.target.getBoundingClientRect();
-  
+
     const minX = containerRect.left - 90;
     const maxX =
       containerRect.left + containerRect.width - signatureRect.width + 30;
     const minY = containerRect.top - 50;
-    
+
     const pageHeight = containerRect.height / numPages; // Calculate the height of each page
     const maxY =
       containerRect.top +
       containerRect.height -
       signatureRect.height +
-      pageHeight * (numPages - 1)+ 300 ; // Adjust maxY based on the number of pages
-  
+      pageHeight * (numPages - 1) +
+      300; // Adjust maxY based on the number of pages
+
     let adjustedX = x;
     let adjustedY = y;
-  
+
     if (x < minX) {
       adjustedX = minX;
     } else if (x > maxX) {
       adjustedX = maxX;
     }
-  
+
     if (y < minY) {
       adjustedY = minY;
     } else if (y > maxY) {
       adjustedY = maxY;
     }
-  
+
     setSignaturePosition({ x: adjustedX, y: adjustedY });
   };
 
@@ -172,14 +179,16 @@ const Checking2 = () => {
                 />
               ))}
             </Document>
-            <div className="absolute top-0">
-              <Draggable
-                position={{ x: signaturePosition.x, y: signaturePosition.y }}
-                onDrag={handleDrag}
-              >
-                <img src={signatureImage} alt="Signature" />
-              </Draggable>
-            </div>
+            {signatureImage && ( // Check if signatureImage is not empty
+              <div className="absolute top-0">
+                <Draggable
+                  position={{ x: signaturePosition.x, y: signaturePosition.y }}
+                  onDrag={handleDrag}
+                >
+                  <img src={signatureImage} alt="Signature" />
+                </Draggable>
+              </div>
+            )}
           </div>
           <div>
             <Button onClick={handleOpen}>Sign</Button>
@@ -226,7 +235,9 @@ const Checking2 = () => {
                 </Typography>
               </Box>
             </Modal>
-            <button onClick={handleDownload}>Download</button>
+            {signedPdfUrl && (
+              <button onClick={handleDownload}>Download</button>
+            )}
           </div>
         </div>
       )}
