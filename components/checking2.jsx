@@ -88,24 +88,35 @@ const Checking2 = () => {
     try {
       const pdfDoc = await PDFDocument.load(await file.arrayBuffer());
       const pages = pdfDoc.getPages();
-
+  
       const image = await pdfDoc.embedPng(signatureImage);
       const { width, height } = image.scale(0.75);
-
-      const page = pages[pageNumber - 1];
-      page.drawImage(image, {
-        x: signaturePosition.x ,
-        y: page.getHeight() - signaturePosition.y - height + 86,
-        width,
-        height,
-      });
-
+  
+      for (let i = 0; i < pages.length; i++) {
+        const page = pages[i];
+        const container = pdfContainerRef.current;
+        const containerRect = container.getBoundingClientRect();
+        const pageHeight = containerRect.height / numPages;
+        const pageSignaturePosition = {
+          x: signaturePosition.x + 10,
+          y: page.getHeight() - signaturePosition.y - height + 46 + pageHeight * i,
+        };
+  
+        page.drawImage(image, {
+          x: pageSignaturePosition.x,
+          y: pageSignaturePosition.y,
+          width,
+          height,
+        });
+      }
+  
       const modifiedPdfBytes = await pdfDoc.save();
       download(modifiedPdfBytes, "modified.pdf", "application/pdf");
     } catch (error) {
       console.error("Error modifying and downloading PDF:", error);
     }
   };
+  
 
   const handleDrag = (e, draggableData) => {
     const { x, y } = draggableData;
@@ -123,7 +134,7 @@ const Checking2 = () => {
       containerRect.top +
       containerRect.height -
       signatureRect.height +
-      pageHeight * (numPages - 1) + 350; // Adjust maxY based on the number of pages
+      pageHeight * (numPages - 1)+ 300 ; // Adjust maxY based on the number of pages
   
     let adjustedX = x;
     let adjustedY = y;
