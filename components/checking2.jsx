@@ -1,7 +1,4 @@
 import React, { useState, useRef, useEffect } from "react";
-import { Resizable } from "react-resizable";
-import { ResizableBox } from 'react-resizable';
-
 import Box from "@mui/material/Box";
 import Button from "@mui/material/Button";
 import Typography from "@mui/material/Typography";
@@ -34,33 +31,20 @@ const checking2 = () => {
   const [file, setFile] = useState(null);
   const [signatureImage, setSignatureImage] = useState("");
   const [signaturePosition, setSignaturePosition] = useState({ x: 0, y: 0 });
-  const [signatureSize, setSignatureSize] = useState({ width: 200, height: 100 });
   const [signedPdfUrl, setSignedPdfUrl] = useState(null);
 
   const canvasRef = useRef(null);
   const pdfContainerRef = useRef(null);
 
-  useEffect(() => {
-    const container = pdfContainerRef.current;
-    if (container) {
-      const handleResize = () => {
-        const containerRect = container.getBoundingClientRect();
-        const maxX = containerRect.width - signatureSize.width;
-        const maxY = containerRect.height - signatureSize.height;
+  const [imageSize, setImageSize] = useState(50); // Initial size set to 50%
 
-        setSignaturePosition((prevPosition) => {
-          const adjustedX = Math.min(prevPosition.x, maxX);
-          const adjustedY = Math.min(prevPosition.y, maxY);
-          return { x: adjustedX, y: adjustedY };
-        });
-      };
+  const handleIncreaseSize = () => {
+    setImageSize(imageSize + 10); // Increase size by 10%
+  };
 
-      window.addEventListener("resize", handleResize);
-      return () => {
-        window.removeEventListener("resize", handleResize);
-      };
-    }
-  }, [signatureSize]);
+  const handleDecreaseSize = () => {
+    setImageSize(imageSize - 10); // Decrease size by 10%
+  };
 
   const handleOpen = () => setOpen(true);
   const handleClose = () => setOpen(false);
@@ -165,11 +149,6 @@ const checking2 = () => {
     setSignaturePosition({ x: adjustedX, y: adjustedY });
   };
 
-  const handleResize = (e, { size }) => {
-    setSignatureSize(size);
-  };
-  
-
   return (
     <div>
       <input type="file" accept=".pdf" onChange={onFileChange} />
@@ -188,20 +167,30 @@ const checking2 = () => {
                 />
               ))}
             </Document>
-            {signatureImage && (
-      <div className="absolute top-0">
-        <Draggable
-          position={{ x: signaturePosition.x, y: signaturePosition.y }}
-          onDrag={handleDrag}
-        >
-          <div style={{ width: signatureSize.width, height: signatureSize.height }}>
-          <ResizableBox width={400} height={300} onResize={handleResize} >
-              <img src={signatureImage} alt="Signature" />
-            </ResizableBox>
-          </div>
-        </Draggable>
-      </div>
-    )}
+            {signatureImage && ( // Check if signatureImage is not empty
+              <>
+                <div className="absolute top-0">
+                  <Draggable
+                    position={{
+                      x: signaturePosition.x,
+                      y: signaturePosition.y,
+                    }}
+                    onDrag={handleDrag}
+                  >
+                    <div>
+                  <button className="mr-3 bg-black text-white rounded px-1" onClick={handleIncreaseSize}>Increase Size</button>
+                  <button className=" bg-black text-white rounded px-1" onClick={handleDecreaseSize}>Decrease Size</button>
+                    <img
+                      src={signatureImage}
+                      style={{ width: `${imageSize}%` }}
+                      alt="Signature"
+                      />
+                      </div>
+                  </Draggable>
+                </div>
+                
+              </>
+            )}
           </div>
           <div>
             <Button onClick={handleOpen}>Sign</Button>
@@ -248,9 +237,7 @@ const checking2 = () => {
                 </Typography>
               </Box>
             </Modal>
-            {signedPdfUrl && (
-              <button onClick={handleDownload}>Download</button>
-            )}
+            {signedPdfUrl && <button onClick={handleDownload}>Download</button>}
           </div>
         </div>
       )}
